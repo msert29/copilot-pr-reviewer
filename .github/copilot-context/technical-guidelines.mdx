@@ -1,0 +1,410 @@
+# Technical guidelines
+
+This page documents specific technical guidelines we as a team have agreed on and when
+needed briefly lists the reasons for them. This is not supposed to be a long-winded discussion
+page, but just a list of the current practises we are adhering to. The expected audience is both
+new team members for getting up to speed and for existing team members refreshing their
+memory on how/why something is done the way it is. The page history of this page will be
+useful to see changes over time as well.
+
+```
+Language versioning
+Python version
+Python type hinting
+Untyped function decorators
+Donʼt shorten names
+Onion architecture
+Domain driven design
+Data transfer objects
+Naming conventions for DTOs
+Building from models
+Decoding/encoding
+New Models
+API endpoints
+API Pagination
+Input
+Output
+Python unittests
+Removal of Django permissions in data migrations
+```
+## Language versioning
+
+Guideline to benefit from language features and improvements without compromising stability is
+to keep platform up to date using one version behind the latest.
+
+e.g.
+
+If python 3. 13 is the latest, it should be our goal to be running on python 3. 12
+
+See for more.
+
+Python version
+
+We are using Python 3. 9. When writing code, if you already know youʼd want to use a language
+feature available in a newer Python version, please add a comment in a fixed format so we can
+
+```
+Software vendor update policy
+```
+
+easily search for those and implement those changes in the future once we upgrade to that
+version. The comment should be formatted like this:
+
+# # PY3.10: add kw_only=True
+
+## Python type hinting
+
+Try to add type hints in any new code you write, and if working on existing code and you see
+places where they are missing and could be easily added, go ahead and do so if you feel like it.
+
+## Untyped function decorators
+
+Avoid using untyped function decorators, they completely disable mypy type checking (see
+for details).
+
+## Donʼt shorten names
+
+We have a company policy not to abbreviate variable names. As tempting as it may be to call
+
+# local variables pinstead of protocol, we donʼt. This goes for loop variables as well, so:
+
+The only exception is list comprehensions where you can possibly get away with doing
+
+# [foo(x) for x in ...].
+
+## Onion architecture
+
+We use onion architecture, which is descibed well. Until you get used to it you will find your
+PRs rejected with comments like “this is a layering violation” etc. You have to accept the fact
+there will be some level of what seems like code duplication to avoid them, but it is a necessary
+evil to get the benefits of the onion architecture.
+
+## Domain driven design
+
+We use. This has the following implications:
+
+```
+We do not pass around Django models; instead we create (DTOs);
+```
+# these live in files called data_objects.py.
+
+```
+All data modification should happen in specific commands; these live in files called
+```
+# commands.py ( ).
+
+```
+Do not use Django Model signals to ensure all behaviour is within the command
+```
+this
+ticket
+
+```
+1 # good
+2 for user in users:
+3
+4 # bad
+5 for u in users:
+```
+```
+here
+```
+```
+Domain-driven design
+Data Transfer Objects
+```
+```
+example
+```
+
+```
+All data querying should happen in specific query functions; these live in files called
+```
+# queries.py ( ).
+
+Data transfer objects
+
+All new DTOs should be built using Pydantic (see ). Example:
+
+Naming conventions for DTOs
+
+DTOs passed to commands:
+
+# <action><entity>CommandDTO e.g. CreateCategoryCommandDTO
+
+DTOs passed to RestAPI requests:
+
+# RestAPI<action><entity>RequestDTO e.g.
+
+# RestAPIListConnectionsRequestDTO
+
+DTOs returned as RestAPI response:
+
+# RestAPI<action><entity>ResponseDTO e.g.
+
+# RestAPIListConnectionsResponseDTO
+
+DTOs contained in RestAPI responses:
+
+# RestAPI<entity>DTO e.g. RestAPIConnectionDTO
+
+DTOs returned by queries:
+
+# <entity>DTO e.g. SupplierConnectionDTO
+
+# If there is already an old attr.s or dataclass based DTO, e.g. ProductDTO, and it
+
+would be a huge amount of work to replace it everywhere, but you need a new Pydantic DTO, it
+
+# should separated from the old one by adding Pydanticat the end of the name, i.e.
+
+# ProductDTOPydantic. Eventually if we manage to get rid of the old ones we can simply
+
+# do a global rename of ProductDTOPydanticto ProductDTO.
+
+Building from models
+
+Creating a DTO from a model should be in the modelʼs query manager class. Example:
+
+```
+example
+```
+```
+this
+1 class PersonDTO(BaseModel):
+2 id: int
+3 external_id: uuid.UUID
+4 name: NameDTO
+5 pet: Animal
+6 pet_value: Decimal
+7 birthdate: Optional[datetime.datetime]
+8 extra_data: Optional[str] = None
+```
+```
+1 class OrderStatusHistoryQueryManager:
+```
+
+Decoding/encoding
+
+DTOs are serialized to/from JSON in two usecases: if used as arguments to background Celery
+
+# tasks (Pydantic handles encoding/decoding) or if used as a Django models.JSONField
+
+with automatic encoding/decoding (limited usage in our codebase).
+
+## New Models
+
+# When creating a new model, the primary key for the model should be named as id.
+
+# Regardless of the type being a UUID, the field should always be named as id allowing us to
+
+quickly identity that it is the primary key for the model.
+
+Respective DTOs should also follow suite and be typed with the same key names.
+
+Ordering of the keys should always have required fields at the top followed by optional fields
+
+## API endpoints
+
+We might get a long-term solution in some day, but for now
+we want to minimize adding new code writing API endpoints the “standard” Django-rest-
+framework way as we are trying to move away from it. Short description of how to write new API
+endpoints:
+
+# Do not use class-based views; write function-based views and use api_viewetc
+
+```
+decorators as appropriate
+```
+```
+2 @staticmethod
+3 def from_model(model: OrderStatusHistory) -> OrderStatusHistoryDTO:
+4 return OrderStatusHistoryDTO(
+5 order_id=model.order_id,
+6 status=OrderStatus(model.status),
+7 created=model.created
+8 )
+```
+```
+1 class WebhookDelivery(models.Model):
+2 id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+```
+```
+1 class WebhookDeliveryDTO(BaseModel):
+2 id: UUID
+3 webhook_uuid: UUID
+4 request_headers: str
+5 request_body: str
+6 requested_at: datetime
+7 response_headers: Optional[str]
+8 response_body: Optional[str]
+9 responded_at: Optional[datetime]
+10 response_status_code: Optional[int]
+```
+```
+28. REST API framework to use
+```
+
+Use pydantic to (de)serialize both incoming and outgoing data; we have helper functions for
+that, see how the example code below uses them. Do not use DRF serializers or Django
+forms.
+
+```
+The only time you should use JsonResponse to serialize responses is trivial return types
+like below where you literally see all the data on the screen and it is immediately clear itʼs all
+JSON serializable without needing Pydantic:
+```
+If you need to have one URL with multiple HTTP methods doing different things, handle it by
+manually dispatching from your top-level view function to appropriate helper functions
+
+# depending on request.method
+
+Use logged in userʼs retailer or supplier to retrieve data relevant to that user instead of
+explicitly passing a retailer or supplier id to the endpoint
+
+# Use vs_client from conftest.py to interact with API endpoints in tests
+
+# Use HTTPStatus enum for response statuses, both in code and in tests
+
+Test API endpoints locally using postman to make sure they are working, not only from unit
+tests
+
+Examples:
+
+# list_connectionsin
+
+```
+Uses pydantic to parse data from a GET request (through the
+```
+# querystring_to_dtofunction)
+
+# set_feature_switch_state in
+
+```
+Uses pydantic to parse JSON data from a PUT request (through the
+```
+# json_to_dtofunction)
+
+# categories_for_retailer_view in
+
+```
+Uses JsonResponse for 403 return which is a trivial response
+```
+# Uses HttpReponse with dto_to_json to serialize the data for the response
+
+```
+Uses HTTPStatus enum value to return the status
+```
+```
+1 return JsonResponse(
+2 {"message": "Webhook stock mapping updated successfully."},
+3 status=HTTPStatus.OK.value,
+4 )
+```
+```
+https://github.com/Virtualstock/the-
+edge/blob/master/backend/restapi/connections/views.py
+```
+```
+https://github.com/Virtualstock/the-
+edge/blob/master/backend/restapi/feature_switches/views.py
+```
+```
+views.py
+```
+
+```
+Return a well-structured error response, ensure that your JsonResponse contains both a
+descriptive "detail" message and a standardised "code" field from an enum. Make sure to set
+```
+# the status utilising the HTTPStatus from from http import HTTPStatus.There
+
+# is a utility function restapi_error that will do this for you; you should use that
+
+```
+whenever possible. Avoid raising DRF-derived ValidationError exceptions; we are moving
+away from DRF.
+```
+# Use restapi_dtofrom restapi.utils to serialize your outgoing response like
+
+```
+this:
+```
+API Pagination
+
+Input
+
+# A GET endpoint with pagination should take in pageand page_sizeparameters, with the
+
+# pagedefaulting to 1. These is a common pattern to follow to parse and validate these
+
+correctly:
+
+Output
+
+Return a DTO with the following fields:
+
+## Python unittests
+
+New tests should preferably be written using style tests. If modifying or extending code
+
+# with existing tests with old-style unittest.TestCase tests, itʼs okay to stick to that. You
+
+# can still use plain asserts though in those tests, no need to use assertEqual etc.
+
+# When creating fixtures for pytest tests add these to conftest.py
+
+# If a fixture creates multiple records for the test scenario, use bulk_create e.g.
+
+# categories_for_retailer_basic in
+
+```
+1 return restapi_dto(webhook_delivery, HTTPStatus.OK)
+```
+```
+1 try:
+2 pagination_params = get_pagination_params(request)
+3 except PaginationError as e:
+4 return handle_pagination_error(e)
+```
+```
+1 total_count: int
+2 results: list[SpecificType]
+```
+```
+pytest
+```
+```
+https://github.com/Virtualstock/the-
+```
+edge/blob/master/backend/conftest.py
+
+
+## Removal of Django permissions in data migrations
+
+As we streamline our permissions and modularise our product we increasingly will be removing
+
+# individual permissions. A feature of Django is that the Permission object is left behind in
+
+# the database even after removing it from the model.Meta definition and generating a
+
+# migration to remove it. Consequently it is necessary to include an additional RunPython
+
+step in any such migration. We have a reusable class for this purpose which can be
+implemented in the following manner:
+
+# migrations.RunPython(
+
+# partial(
+
+# PermissionDeletionMigration.migrate,
+
+# app_label="oms_users",
+
+# model="user",
+
+# codename="edit_expected_delivery_date",
+
+# ),
+
+

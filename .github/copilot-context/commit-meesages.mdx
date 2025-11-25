@@ -1,0 +1,16 @@
+Commit messages
+
+Follow the generally accepted standard way of writing git commit messages, which is described well here: https://gist.github.com/robertpainsi/b632364184e70900af4ab688decf6f53 
+
+Please start the first line of the commit message with a reference to the Jira ticket number in the format VS-XXXX , that makes figuring out what a change relates to later on much easier and we have also configured GitHub to make such links clickable when browsing code / pull requests.
+
+Example of a good commit message:
+
+VS-9865 Use pytest in CircleCI to run the Python unittests
+
+This also uses "circleci tests run" to decide which tests to run, which
+enables the "Rerun failed tests" CircleCI functionality, so it's now
+possible to rerun just the failed tests.
+
+It also moves the slow data migration tests to their test job.
+
