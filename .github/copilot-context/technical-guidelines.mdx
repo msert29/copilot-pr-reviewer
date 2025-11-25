@@ -408,3 +408,132 @@ implemented in the following manner:
 # ),
 
 
+
+
+---
+title: Commit Message Guidelines
+description: Standards for writing git commit messages in our repository
+---
+
+# Commit Message Guidelines
+
+All commit messages in this repository must follow these guidelines.
+
+## Format
+
+Commit messages should follow the generally accepted standard described here: https://gist.github.com/robertpainsi/b632364184e70900af4ab688decf6f53
+
+## Required Format
+```
+VS-XXXX Short summary of the change (imperative mood, ≤50 chars)
+
+Detailed explanation of what and why (not how). This section should
+explain the reasoning behind the change and any important context.
+Wrap lines at 72 characters.
+
+Can include multiple paragraphs if needed.
+```
+
+## Rules
+
+1. **First line MUST start with Jira ticket reference**: `VS-XXXX` where XXXX is the ticket number
+2. **First line should be ≤50 characters** (after the ticket number)
+3. **Use imperative mood** in the subject line (e.g., "Add feature" not "Added feature")
+4. **Separate subject from body** with a blank line
+5. **Wrap body at 72 characters**
+6. **Explain WHAT and WHY**, not HOW (the code shows how)
+7. **Use the body to provide context** when the change is not obvious
+
+## Good Examples
+```
+VS-9865 Use pytest in CircleCI to run the Python unittests
+
+This also uses "circleci tests run" to decide which tests to run, which
+enables the "Rerun failed tests" CircleCI functionality, so it's now
+possible to rerun just the failed tests.
+
+It also moves the slow data migration tests to their test job.
+```
+```
+VS-1234 Fix pagination bug in product listing endpoint
+
+The page_size parameter was not being validated, allowing users to
+request unlimited results which caused memory issues. Added validation
+to limit page_size to a maximum of 100 items.
+```
+```
+VS-5678 Add RestAPIListProductsResponseDTO
+
+Following our DTO naming conventions, this replaces the generic
+ProductList class with a properly named DTO that includes the required
+total_count field for pagination responses.
+```
+
+## Bad Examples
+
+❌ **Missing ticket reference:**
+```
+Fix bug in inventory
+```
+
+❌ **First line too long:**
+```
+VS-1234 Fixed the bug where the inventory system was not properly updating quantities when multiple concurrent requests
+```
+
+❌ **No explanation in body:**
+```
+VS-1234 Update endpoint
+```
+
+❌ **Past tense instead of imperative:**
+```
+VS-1234 Fixed pagination bug
+```
+
+❌ **Explaining HOW instead of WHAT/WHY:**
+```
+VS-1234 Fix pagination
+
+Changed the query to use limit() and added validation for page_size
+parameter using pydantic validator.
+```
+
+## Benefits
+
+- Makes it easy to understand what changed and why
+- Ticket references become clickable links in GitHub
+- Easier to track changes back to requirements
+- Helps with git bisect and debugging
+- Improves team communication
+
+## Enforcement
+
+All pull requests will be reviewed for commit message compliance. Commits that
+do not follow these guidelines should be amended before merging.
+```
+
+---
+
+## Comment to Post in Your PR
+
+Post this comment in your pull request:
+```
+@copilot please review this PR comprehensively:
+
+1. **Code Review**: Check all code changes against our technical guidelines in `.github/copilot-context/technical-guidelines.mdx`, including:
+   - DTO naming conventions (RestAPI<action><entity>RequestDTO pattern)
+   - No abbreviated variable names
+   - HTTPStatus enum usage
+   - Pagination response structure (total_count and results fields)
+   - Pydantic usage for DTOs
+   - Type hints
+
+2. **Commit Message Review**: Check ALL commit messages in this PR against `.github/copilot-context/commit-messages.mdx`:
+   - Must start with VS-XXXX ticket number
+   - First line ≤50 characters (after ticket)
+   - Includes explanatory body for non-trivial changes
+   - Uses imperative mood
+   
+Please flag any violations in both the code and commit messages.
+
