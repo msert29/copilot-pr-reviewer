@@ -1,0 +1,136 @@
+@copilot please conduct a thorough code review of this PR following our technical standards and Python best practices.
+
+## MANDATORY CHECKS
+
+### 1. Technical Guidelines Compliance
+Review ALL changes against `.github/copilot-context/technical-guidelines.mdx`:
+- DTO naming conventions (RestAPI<action><entity>RequestDTO, <entity>DTO patterns)
+- No abbreviated variable names (use `user` not `u`, `protocol` not `p`)
+- Onion architecture and DDD principles (no Django model passing, use DTOs)
+- Commands in `commands.py`, queries in `queries.py`, DTOs in `data_objects.py`
+- Pydantic for all new DTOs with proper type hints
+- HTTPStatus enum usage (not magic numbers)
+- API pagination structure (total_count and results fields)
+- Function-based views with `@api_view` decorator (not class-based)
+- Use `restapi_dto()` and `restapi_error()` utility functions
+- Primary keys named as `id` (even for UUIDs)
+- pytest-style tests (not unittest.TestCase)
+
+### 2. Commit Message Standards
+Check ALL commits against `.github/copilot-context/commit-messages.mdx`:
+- Must start with `VS-XXXX` ticket reference
+- First line ≤50 characters (excluding ticket)
+- Imperative mood ("Add feature" not "Added feature")
+- Body explains WHAT and WHY (not HOW)
+- Lines wrapped at 72 characters
+
+## CODE QUALITY REVIEW
+
+### Python Best Practices
+- **Type Hints**: All function signatures must have complete type hints (params and return types)
+- **Avoid untyped decorators**: They disable mypy checking
+- **Type annotations**: Use `Optional[T]`, `list[T]`, `dict[str, T]` (Python 3.9+)
+- **Docstrings**: Complex functions need docstrings explaining purpose and parameters
+- **Import organization**: Standard library, third-party, local (separated by blank lines)
+- **String formatting**: Use f-strings, not `.format()` or `%`
+- **Constant naming**: UPPER_CASE for module-level constants
+- **Private methods**: Use `_method_name` prefix for internal methods
+
+### Django/Pydantic Patterns
+- **No Django signals**: All behavior in commands
+- **QuerySet optimization**: Check for N+1 queries, use `select_related`/`prefetch_related`
+- **DTO validation**: Pydantic models should validate all input/output
+- **JSON fields**: Use Pydantic DTOs with JSONField, not raw dicts
+- **Database transactions**: Wrap data modifications in `@transaction.atomic`
+- **No raw SQL**: Unless absolutely necessary with justification
+
+### Error Handling
+- **Specific exceptions**: Catch specific exceptions, not bare `except:`
+- **API errors**: Use `restapi_error()` with descriptive message and error code enum
+- **Validation**: Pydantic handles most validation, avoid manual checks
+- **Logging**: Add appropriate logging for errors and important operations
+- **Status codes**: Use `HTTPStatus.OK`, `HTTPStatus.BAD_REQUEST`, etc.
+
+### Security & Performance
+- **SQL injection**: No string concatenation in queries
+- **Authentication**: Verify user permissions in views
+- **Sensitive data**: No passwords, API keys, or PII in logs
+- **N+1 queries**: Use `select_related` or `prefetch_related`
+- **Bulk operations**: Use `bulk_create()` for multiple inserts (see conftest.py patterns)
+- **Indexing**: Check if new queries need database indexes
+
+### Testing Requirements
+- **pytest style**: Use plain `assert`, not `self.assertEqual`
+- **Fixtures**: Add reusable fixtures to `conftest.py`
+- **Coverage**: Test happy path, edge cases, and error conditions
+- **API testing**: Use `vs_client` fixture for endpoint tests
+- **Mocking**: Mock external services and time-dependent code
+- **Test naming**: `test_<function_name>_<scenario>_<expected_result>`
+
+## ARCHITECTURE CHECKS
+
+### Layering Violations
+- **Domain layer**: No Django imports in domain logic
+- **Application layer**: Commands/queries should not depend on API layer
+- **Infrastructure**: Database access only in queries, not in commands
+- **API layer**: Only handles HTTP concerns, delegates to commands/queries
+
+### Code Organization
+- **File placement**: Commands, queries, DTOs in correct files
+- **Separation of concerns**: Each function has single responsibility
+- **DRY principle**: Extract common patterns to utilities
+- **SOLID principles**: Check for tight coupling and violations
+
+### DTO Usage
+- **No model leakage**: Never pass Django models outside queries
+- **Proper conversion**: Use `from_model()` class methods in QueryManagers
+- **Naming consistency**: Follow DTO naming conventions strictly
+- **Required vs Optional**: Correctly mark optional fields in Pydantic models
+
+## DOCUMENTATION
+
+### Code Comments
+- **Why not what**: Explain reasoning, not obvious operations
+- **TODO comments**: Include ticket reference `# TODO VS-XXXX: description`
+- **Complex logic**: Add explanatory comments for non-obvious code
+- **Version-specific**: Use `# PY3.10: add kw_only=True` pattern for future features
+
+### API Documentation
+- **Endpoint docstrings**: Document expected input/output DTOs
+- **Query parameters**: Document pagination, filtering options
+- **Error responses**: Document possible error codes and messages
+
+## REVIEW FEEDBACK FORMAT
+
+Please structure feedback as:
+
+**🔴 CRITICAL** - Must fix (blocks merge):
+- Technical guideline violations
+- Security issues
+- Broken tests
+- Missing type hints on public functions
+
+**🟡 RECOMMENDED** - Should fix:
+- Optimization opportunities
+- Better naming suggestions
+- Missing tests for edge cases
+- Documentation improvements
+
+**💡 SUGGESTION** - Nice to have:
+- Refactoring ideas
+- Future improvements
+- Alternative approaches
+
+**✅ PRAISE** - Good patterns:
+- Highlight well-written code
+- Acknowledge good practices
+- Recognize thoughtful solutions
+
+## ADDITIONAL NOTES
+- Be constructive and specific in all feedback
+- Provide code examples for suggestions when possible
+- Explain WHY something should change, not just WHAT
+- Link to technical guidelines for violations
+- If unsure, ask questions rather than assuming
+
+Please complete your review covering all sections above.
